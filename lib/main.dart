@@ -25,7 +25,7 @@ class MyApp extends StatelessWidget {
       home: LoginPage(),
       builder: (context, child) {
         return DeviceFrame(
-          device: Devices.ios.iPhone13,
+          device: Devices.ios.iPhone13Mini,
           screen: child!,
         );
       },

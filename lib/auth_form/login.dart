@@ -45,6 +45,7 @@ class _LoginPageState extends State<LoginPage> {
       if (snapshot.docs.isEmpty) {
         setState(() {
           pesan = "Username tidak ditemukan";
+          isLoading = false;
         });
         return;
       }

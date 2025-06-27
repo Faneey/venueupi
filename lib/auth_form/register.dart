@@ -23,7 +23,6 @@ class RegisterPage extends State<AuthForm> {
   String pesan = "";
 
   void register() async {
-
     setState(() {
       isLoading = true;
     });
@@ -247,50 +246,58 @@ class RegisterPage extends State<AuthForm> {
                           },
                         ),
                         SizedBox(height: 20),
-                        isLoading ? const CircularProgressIndicator()
-                        : ElevatedButton(
-                          onPressed: () {
-                            register();
-                          },
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Color(
-                                0xFFE21F27), // Menggunakan kode warna E21F27
-                            padding: EdgeInsets.symmetric(
-                                horizontal: 50, vertical: 15),
-                          ),
-                          child: Text(
-                            'Sign UP',
-                            style: TextStyle(color: Color(0xFFFAE7AD)),
-                          ),
-                        ),
-                        isLoading ? const Text(
-                          "sedang membuat akun...", style: TextStyle(fontSize: 16, color: Colors.grey, fontStyle: FontStyle.italic),
-                        )
-                        : RichText(
-                          text: TextSpan(
-                            children: [
-                              TextSpan(
-                                text: 'Sudah Punya Akun? ',
-                                style: TextStyle(
-                                    color: Colors.black, fontSize: 16),
+                        isLoading
+                            ? const CircularProgressIndicator()
+                            : ElevatedButton(
+                                onPressed: () {
+                                  register();
+                                },
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Color(
+                                      0xFFE21F27), // Menggunakan kode warna E21F27
+                                  padding: EdgeInsets.symmetric(
+                                      horizontal: 50, vertical: 15),
+                                ),
+                                child: const Text(
+                                  'Sign UP',
+                                  style: TextStyle(color: Color(0xFFFAE7AD)),
+                                ),
                               ),
-                              TextSpan(
-                                text: 'Masuk di sini',
+                        const SizedBox(height: 20),
+                        isLoading
+                            ? const Text(
+                                "sedang membuat akun...",
                                 style: TextStyle(
-                                    color: Color(0xFFE21F27), fontSize: 16),
-                                recognizer: TapGestureRecognizer()
-                                  ..onTap = () {
-                                    Navigator.push(
-                                      context,
-                                      MaterialPageRoute(
-                                        builder: (context) => LoginPage(),
-                                      ),
-                                    );
-                                  },
+                                    fontSize: 16,
+                                    color: Colors.grey,
+                                    fontStyle: FontStyle.italic),
+                              )
+                            : RichText(
+                                text: TextSpan(
+                                  children: [
+                                    TextSpan(
+                                      text: 'Sudah Punya Akun? ',
+                                      style: TextStyle(
+                                          color: Colors.black, fontSize: 16),
+                                    ),
+                                    TextSpan(
+                                      text: 'Masuk di sini',
+                                      style: TextStyle(
+                                          color: Color(0xFFE21F27),
+                                          fontSize: 16),
+                                      recognizer: TapGestureRecognizer()
+                                        ..onTap = () {
+                                          Navigator.push(
+                                            context,
+                                            MaterialPageRoute(
+                                              builder: (context) => LoginPage(),
+                                            ),
+                                          );
+                                        },
+                                    ),
+                                  ],
+                                ),
                               ),
-                            ],
-                          ),
-                        ),
                         Center(
                           child: Column(
                             children: [
