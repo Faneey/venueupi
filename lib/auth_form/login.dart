@@ -1,14 +1,87 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:venueupi/auth_form/register.dart';
+import 'package:venueupi/home_page.dart/home.dart';
 
-class LoginPage extends StatelessWidget {
+class LoginPage extends StatefulWidget {
+  const LoginPage({super.key});
+
+  @override
+  State<LoginPage> createState() => _LoginPageState();
+}
+
+class _LoginPageState extends State<LoginPage> {
+  final TextEditingController usernameController = TextEditingController();
+  final TextEditingController passwordController = TextEditingController();
+  String pesan = '';
+  bool _isPasswordVisible = false;
+  bool isLoading = false;
+
+  void login() async {
+    setState(() {
+      isLoading = true;
+    });
+    final username = usernameController.text.trim();
+    final password = passwordController.text.trim();
+
+    if (username.isEmpty || password.isEmpty) {
+      setState(() {
+        pesan = "Username dan password harus diisi";
+        isLoading = false;
+      });
+      return;
+    }
+
+    try {
+      // Cari email berdasarkan username di Firestore
+      final snapshot = await FirebaseFirestore.instance
+          .collection('users')
+          .where('username', isEqualTo: username)
+          .limit(1)
+          .get();
+
+      if (snapshot.docs.isEmpty) {
+        setState(() {
+          pesan = "Username tidak ditemukan";
+        });
+        return;
+      }
+
+      final userData = snapshot.docs.first.data();
+      final email = userData['email'];
+
+      // Login ke Firebase Auth pakai email & password
+      await FirebaseAuth.instance.signInWithEmailAndPassword(
+        email: email,
+        password: password,
+      );
+
+      setState(() {
+        pesan = "Login berhasil";
+      });
+      setState(() {
+        isLoading = false;
+      });
+
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => HomePage()),
+      );
+    } catch (e) {
+      setState(() {
+        pesan = "Login gagal: ${e.toString()}";
+        isLoading = false;
+      });
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       body: Container(
-        decoration: BoxDecoration(
+        decoration: const BoxDecoration(
           color: Colors.white,
         ),
         child: Stack(
@@ -19,7 +92,7 @@ class LoginPage extends StatelessWidget {
               child: Container(
                 width: 125,
                 height: 130,
-                color: Color(0xFFFFCC34),
+                color: const Color(0xFFFFCC34),
               ),
             ),
             Positioned(
@@ -28,106 +101,126 @@ class LoginPage extends StatelessWidget {
               child: Container(
                 width: 80,
                 height: 80,
-                color: Color(0xFFFFCC34),
+                color: const Color(0xFFFFCC34),
               ),
             ),
             Center(
               child: SingleChildScrollView(
-                child: Padding(
-                  padding: const EdgeInsets.all(20),
-                  child: Container(
-                    width: MediaQuery.of(context).size.width < 600
-                        ? MediaQuery.of(context).size.width * 0.9
-                        : 400,
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Column(
-                          children: [
-                            Text(
-                              'Login',
-                              style: TextStyle(
-                                fontSize: 32,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            SizedBox(height: 5),
-                            Container(
-                              width: 60,
-                              height: 3,
-                              color: Color(0xFFE21F27),
-                            ),
-                          ],
+                padding: const EdgeInsets.all(20),
+                child: Container(
+                  width: MediaQuery.of(context).size.width < 600
+                      ? MediaQuery.of(context).size.width * 0.9
+                      : 400,
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Text(
+                        'Login',
+                        style: TextStyle(
+                          fontSize: 32,
+                          fontWeight: FontWeight.bold,
                         ),
-                        SizedBox(height: 20),
-                        TextField(
-                          decoration: InputDecoration(
-                            labelText: 'Username',
-                            border: OutlineInputBorder(),
-                          ),
+                      ),
+                      const SizedBox(height: 5),
+                      Container(
+                        width: 60,
+                        height: 3,
+                        color: const Color(0xFFE21F27),
+                      ),
+                      const SizedBox(height: 20),
+                      Text(
+                        pesan,
+                        style: const TextStyle(color: Colors.red),
+                      ),
+                      const SizedBox(height: 20),
+                      TextField(
+                        controller: usernameController,
+                        decoration: const InputDecoration(
+                          labelText: 'Username',
+                          border: OutlineInputBorder(),
                         ),
-                        SizedBox(height: 20),
-                        TextField(
-                          obscureText: true,
-                          decoration: InputDecoration(
+                      ),
+                      const SizedBox(height: 20),
+                      TextFormField(
+                        controller: passwordController,
+                        obscureText: !_isPasswordVisible,
+                        decoration: InputDecoration(
                             labelText: 'Password',
-                            border: OutlineInputBorder(),
-                          ),
-                        ),
-                        SizedBox(height: 10),
-                        Align(
-                          alignment: Alignment.centerRight,
-                          child: Text(
-                            'Forgot password?',
-                            style: TextStyle(
-                                color: const Color.fromARGB(255, 5, 5, 5)),
-                          ),
-                        ),
-                        SizedBox(height: 20),
-                        ElevatedButton(
-                          onPressed: () {
-                            // Aksi ketika tombol login diklik
-                            print('Login button pressed');
-                          },
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Color(
-                                0xFFE21F27), // Menggunakan kode warna E21F27
-                            padding: EdgeInsets.symmetric(
-                                horizontal: 50, vertical: 15),
-                          ),
-                          child: Text(
-                            'Login',
-                            style: TextStyle(color: Color(0xFFFAE7AD)),
-                          ),
-                        ),
-                        SizedBox(height: 20),
-                        RichText(
-                          text: TextSpan(
-                            children: [
-                              TextSpan(
-                                text: 'Tidak Punya Akun? ',
-                                style: TextStyle(
-                                    color: Colors.black, fontSize: 16),
+                            border: const OutlineInputBorder(),
+                            suffixIcon: IconButton(
+                              icon: Icon(
+                                _isPasswordVisible
+                                    ? Icons.visibility
+                                    : Icons.visibility_off,
                               ),
-                              TextSpan(
-                                text: 'Daftar di sini',
-                                style: TextStyle(
-                                    color: Color(0xFFE21F27), fontSize: 16),
-                                recognizer: TapGestureRecognizer()
-                                  ..onTap = () {
-                                    Navigator.push(
-                                      context,
-                                      MaterialPageRoute(
-                                        builder: (context) => RegisterPage(),
-                                      ),
-                                    );
-                                  },
-                              ),
-                            ],
+                              onPressed: () {
+                                setState(() {
+                                  _isPasswordVisible = !_isPasswordVisible;
+                                });
+                              },
+                            )),
+                      ),
+                      const SizedBox(height: 10),
+                      const Align(
+                        alignment: Alignment.centerRight,
+                        child: Text(
+                          'Forgot password?',
+                          style: TextStyle(
+                            color: Colors.black,
                           ),
-                        )
-                      ],
-                    ),
+                        ),
+                      ),
+                      const SizedBox(height: 20),
+                      isLoading
+                          ? const CircularProgressIndicator()
+                          : ElevatedButton(
+                              onPressed: login,
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: const Color(0xFFE21F27),
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 50, vertical: 15),
+                              ),
+                              child: const Text(
+                                'Login',
+                                style: TextStyle(color: Color(0xFFFAE7AD)),
+                              ),
+                            ),
+                      const SizedBox(height: 20),
+                      isLoading
+                          ? const Text(
+                              "sedang login...",
+                              style: TextStyle(
+                                  fontSize: 16,
+                                  color: Colors.grey,
+                                  fontStyle: FontStyle.italic),
+                            )
+                          : RichText(
+                              text: TextSpan(
+                                children: [
+                                  const TextSpan(
+                                    text: 'Tidak Punya Akun? ',
+                                    style: TextStyle(
+                                        color: Colors.black, fontSize: 16),
+                                  ),
+                                  TextSpan(
+                                    text: 'Daftar di sini',
+                                    style: const TextStyle(
+                                        color: Color(0xFFE21F27), fontSize: 16),
+                                    recognizer: TapGestureRecognizer()
+                                      ..onTap = () {
+                                        Navigator.push(
+                                          context,
+                                          MaterialPageRoute(
+                                            builder: (context) =>
+                                                const AuthForm(),
+                                          ),
+                                        );
+                                      },
+                                  ),
+                                ],
+                              ),
+                            )
+                    ],
                   ),
                 ),
               ),
@@ -138,24 +231,3 @@ class LoginPage extends StatelessWidget {
     );
   }
 }
-
-class TrianglePainter extends CustomPainter {
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..color = const Color(0xFFFFCC34)
-      ..style = PaintingStyle.fill;
-
-    final path = Path()
-      ..moveTo(0, 0)             // Titik awal (pojok kiri atas)
-      ..lineTo(size.width, 0)    // Garis ke kanan
-      ..lineTo(0, size.height)   // Garis ke bawah kiri
-      ..close();                 // Tutup segitiga
-
-    canvas.drawPath(path, paint);
-  }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
-}
-
