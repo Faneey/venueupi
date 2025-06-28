@@ -2,6 +2,45 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:venueupi/auth_form/login.dart';
 
+class SplashScreen extends StatefulWidget {
+  const SplashScreen({super.key});
+
+  @override
+  _SplashScreenState createState() => _SplashScreenState();
+}
+
+class _SplashScreenState extends State<SplashScreen> {
+  @override
+  void initState() {
+    super.initState();
+    _goToHome();
+  }
+
+  _goToHome() async {
+    await Future.delayed(const Duration(seconds: 1));
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(
+        builder: (context) => const HomePage(),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: Center(
+        child: Image.asset(
+          'assets/logo.jpg',
+          width: double.infinity,
+          height: double.infinity,
+          fit: BoxFit.contain,
+        ),
+      ),
+    );
+  }
+}
+
 class HomePage extends StatelessWidget {
   const HomePage({super.key});
 
@@ -12,7 +51,7 @@ class HomePage extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(
         backgroundColor: const Color(0xFFE21F27),
-        title: const Text('Beranda'),
+        title: const Text('Home Page'),
         actions: [
           IconButton(
             icon: const Icon(Icons.logout),
