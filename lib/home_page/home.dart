@@ -1,6 +1,8 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:venueupi/auth_form/login.dart';
+import 'package:venueupi/home_page/transaction.dart';
+import 'package:venueupi/bottom_bar.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -18,12 +20,18 @@ class _SplashScreenState extends State<SplashScreen> {
 
   _goToHome() async {
     await Future.delayed(const Duration(seconds: 1));
-    Navigator.pushReplacement(
-      context,
-      MaterialPageRoute(
-        builder: (context) => const HomePage(),
-      ),
-    );
+    final user = FirebaseAuth.instance.currentUser;
+
+    if (user != null) {
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (context) => const HomePage(),
+        ),
+      );
+    } else {
+      Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => LoginPage()));
+    }
   }
 
   @override
@@ -66,25 +74,9 @@ class HomePage extends StatelessWidget {
           ),
         ],
       ),
-      bottomNavigationBar: BottomNavigationBar(
-        backgroundColor: Colors.white,
+      bottomNavigationBar: CustomBottomBar(
         currentIndex: 1,
-        selectedItemColor: Colors.amber[700],
-        unselectedItemColor: Colors.grey,
-        items: const [
-          BottomNavigationBarItem(
-            icon: Icon(Icons.history),
-            label: 'History',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.home),
-            label: 'Home',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.person),
-            label: 'Me',
-          ),
-        ],
+        parentContext: context,
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
@@ -141,49 +133,73 @@ class VenueCard extends StatelessWidget {
     super.key,
   });
 
+  int _parsePrice(String priceString) {
+    final cleaned = priceString.replaceAll(RegExp(r'[^\d]'), '');
+    return int.tryParse(cleaned) ?? 0;
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        color: Color(0xFFFFCC34),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Column(
-        children: [
-          ClipRRect(
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
-            child: Image.asset(
-              imagePath,
-              width: double.infinity,
-              height: 160,
-              fit: BoxFit.cover,
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      child: GestureDetector(
+        onTap: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => TransactionPage(
+                title: title,
+                imagePath: imagePath,
+                pricePerDay: _parsePrice(price),
+              ),
             ),
+          );
+        },
+        child: Container(
+          decoration: BoxDecoration(
+            color: const Color(0xFFFFCC34),
+            borderRadius: BorderRadius.circular(12),
           ),
-          const SizedBox(height: 8),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 16,
-                  ),
+          child: Column(
+            children: [
+              ClipRRect(
+                borderRadius:
+                    const BorderRadius.vertical(top: Radius.circular(12)),
+                child: Image.asset(
+                  imagePath,
+                  width: double.infinity,
+                  height: 160,
+                  fit: BoxFit.cover,
                 ),
-                const SizedBox(height: 4),
-                Text(
-                  price,
-                  style: const TextStyle(
-                    color: Colors.black87,
-                    fontWeight: FontWeight.w500,
-                  ),
-                )
-              ],
-            ),
-          )
-        ],
+              ),
+              const SizedBox(height: 8),
+              Padding(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      price,
+                      style: const TextStyle(
+                        color: Colors.black87,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    )
+                  ],
+                ),
+              )
+            ],
+          ),
+        ),
       ),
     );
   }

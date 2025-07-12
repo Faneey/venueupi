@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:venueupi/auth_form/login.dart';
-import 'package:venueupi/home_page.dart/home.dart';
+import 'package:venueupi/home_page/home.dart';
 import 'firebase_options.dart';
 import 'package:device_frame/device_frame.dart';
 
@@ -22,6 +23,12 @@ class MyApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       title: 'Upi Venue',
       theme: ThemeData(primarySwatch: Colors.blue),
+      localizationsDelegates: const [
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
+      supportedLocales: const [Locale('id', 'ID'), Locale('en', 'US')],
       home: LoginPage(),
       builder: (context, child) {
         return DeviceFrame(

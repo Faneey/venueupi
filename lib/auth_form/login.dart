@@ -3,7 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:venueupi/auth_form/register.dart';
-import 'package:venueupi/home_page.dart/home.dart';
+import 'package:venueupi/home_page/home.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});

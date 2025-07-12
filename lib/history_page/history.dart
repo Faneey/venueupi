@@ -1,0 +1,333 @@
+import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
+import 'package:venueupi/bottom_bar.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:venueupi/history_page/update.dart';
+
+class Pesanan {
+  final String title;
+  final DateTime tanggal;
+  final int harga;
+  final String status;
+  final String imagePath;
+
+  Pesanan({
+    required this.title,
+    required this.tanggal,
+    required this.harga,
+    required this.status,
+    required this.imagePath,
+  });
+}
+
+class HistoryPage extends StatefulWidget {
+  final int initialTab;
+  const HistoryPage({super.key, required this.initialTab});
+
+  @override
+  State<HistoryPage> createState() => _HistoryPageState();
+}
+
+class _HistoryPageState extends State<HistoryPage> {
+  List<Pesanan> pesananList = [];
+  int selectedTab = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    selectedTab = widget.initialTab;
+    fetchPesanan();
+  }
+
+  Future<void> fetchPesanan() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+
+    final snapshot = await FirebaseFirestore.instance
+        .collection('pesanan')
+        .where('uid', isEqualTo: user.uid)
+        .get();
+
+    print("Jumlah data ditemukan: ${snapshot.docs.length}");
+
+    for (var doc in snapshot.docs) {
+      print("data ditemukan: ${doc.data()}");
+      final data = doc.data();
+      DateTime? tanggalDate;
+
+      try {
+        final rawTanggal = data['tanggal'];
+        if (rawTanggal is Timestamp) {
+          tanggalDate = rawTanggal.toDate();
+        } else if (rawTanggal is String) {
+          // Coba parse manual (kalau terpaksa)
+          tanggalDate =
+              DateFormat("dd MMM yyyy", 'id_ID').parseStrict(rawTanggal);
+        }
+      } catch (e) {
+        print("Gagal parsing tanggal: $e");
+        continue; // skip dokumen yang gagal parsing
+      }
+
+      final docId = doc.id;
+
+      // Cek apakah tanggal melewati hari ini
+      if (tanggalDate != null &&
+          tanggalDate.isBefore(DateTime.now()) &&
+          data['status'] == 'PESANAN') {
+        await FirebaseFirestore.instance
+            .collection('pesanan')
+            .doc(docId)
+            .update({'status': 'SELESAI'});
+      }
+    }
+
+    // Ambil ulang data terbaru setelah update
+    final refreshedSnapshot = await FirebaseFirestore.instance
+        .collection('pesanan')
+        .where('uid', isEqualTo: user.uid)
+        .get();
+
+    final refreshedList = refreshedSnapshot.docs.map((doc) {
+      final data = doc.data();
+      return Pesanan(
+        title: data['title'] ?? '',
+        tanggal: (data['tanggal'] as Timestamp).toDate(),
+        harga: data['harga'] ?? 0,
+        status: data['status'] ?? 'BATAL',
+        imagePath: data['imagePath'] ?? '',
+      );
+    }).toList();
+
+    setState(() {
+      pesananList = refreshedList;
+    });
+  }
+
+  Widget buildTab(String label, int index) {
+    return GestureDetector(
+      onTap: () => setState(() => selectedTab = index),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        decoration: BoxDecoration(
+          color: selectedTab == index ? const Color(0xFFFFCC34) : Colors.white,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: Colors.black12),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+            color: selectedTab == index ? Colors.black : Colors.black54,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget buildListByStatus(String status) {
+    final currencyFormat = NumberFormat.currency(
+        locale: 'id_ID', symbol: 'Rp. ', decimalDigits: 0);
+    final filtered = pesananList.where((p) => p.status == status).toList();
+
+    if (filtered.isEmpty) {
+      return const Center(child: Text('Belum ada data'));
+    }
+
+    return ListView.builder(
+      itemCount: filtered.length,
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      itemBuilder: (context, index) {
+        final pesanan = filtered[index];
+        return Container(
+          margin: const EdgeInsets.only(bottom: 12),
+          decoration: BoxDecoration(
+            color: const Color(0xFFF9F9F9),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: Colors.black12),
+          ),
+          child: ListTile(
+            contentPadding: const EdgeInsets.all(12),
+            onTap: () async {
+              final updatedPesanan = await Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => UpdatePage(pesanan: pesanan),
+                ),
+              );
+
+              if (updatedPesanan != null && mounted) {
+                fetchPesanan(); // refresh data dari Firestore
+              }
+            },
+            title: Text(pesanan.title,
+                style:
+                    const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+            subtitle: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                    DateFormat('dd MMM yyyy', 'id_ID').format(pesanan.tanggal)),
+                Text(currencyFormat.format(pesanan.harga),
+                    style: const TextStyle(fontWeight: FontWeight.w500)),
+              ],
+            ),
+            trailing: status == 'PESANAN'
+                ? TextButton(
+                    style: TextButton.styleFrom(
+                      backgroundColor: const Color(0xFFE21F27),
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 6),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(20)),
+                    ),
+                    onPressed: () => showCancelDialog(pesanan),
+                    child: const Text('BATAL',
+                        style: TextStyle(fontWeight: FontWeight.bold)),
+                  )
+                : null,
+          ),
+        );
+      },
+    );
+  }
+
+  void showCancelDialog(Pesanan pesanan) {
+    showDialog(
+      context: context,
+      barrierDismissible: true,
+      builder: (context) {
+        return Dialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    const Expanded(
+                      child: Text(
+                        'Batalkan Pesanan',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 18,
+                        ),
+                      ),
+                    ),
+                    GestureDetector(
+                      onTap: () => Navigator.pop(context),
+                      child: const Icon(Icons.close, color: Colors.black54),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                const Text(
+                  'Jika pesanan dibatalkan, maka DP kamu akan hangus~',
+                  style: TextStyle(fontSize: 14, color: Colors.black54),
+                ),
+                const SizedBox(height: 20),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    TextButton(
+                      style: TextButton.styleFrom(
+                        backgroundColor: const Color(0xFFFFF1C4),
+                        foregroundColor: Colors.black,
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 20, vertical: 10),
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12)),
+                      ),
+                      onPressed: () => Navigator.pop(context),
+                      child: const Text('Tidak'),
+                    ),
+                    const SizedBox(width: 12),
+                    TextButton(
+                      style: TextButton.styleFrom(
+                        backgroundColor: const Color(0xFFE21F27),
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 20, vertical: 10),
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12)),
+                      ),
+                      onPressed: () async {
+                        Navigator.pop(context);
+                        final user = FirebaseAuth.instance.currentUser;
+                        final snapshot = await FirebaseFirestore.instance
+                            .collection('pesanan')
+                            .where('uid', isEqualTo: user?.uid)
+                            .where('title', isEqualTo: pesanan.title)
+                            .where('tanggal',
+                                isEqualTo: Timestamp.fromDate(pesanan.tanggal))
+                            .limit(1)
+                            .get();
+                        if (snapshot.docs.isNotEmpty) {
+                          await FirebaseFirestore.instance
+                              .collection('pesanan')
+                              .doc(snapshot.docs.first.id)
+                              .update({'status': 'BATAL'});
+                          fetchPesanan();
+                        }
+                      },
+                      child: const Text('Ya'),
+                    ),
+                  ],
+                )
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.white,
+      appBar: AppBar(
+        title: const Text('History', style: TextStyle(color: Colors.black)),
+        backgroundColor: Colors.white,
+        elevation: 0,
+      ),
+      body: Column(
+        children: [
+          const SizedBox(height: 8),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                buildTab('Pesanan', 0),
+                buildTab('Riwayat', 1),
+                buildTab('Batal', 2),
+              ],
+            ),
+          ),
+          const SizedBox(height: 12),
+          Expanded(
+            child: IndexedStack(
+              index: selectedTab,
+              children: [
+                buildListByStatus('PESANAN'),
+                buildListByStatus('SELESAI'),
+                buildListByStatus('BATAL'),
+              ],
+            ),
+          ),
+        ],
+      ),
+      bottomNavigationBar: CustomBottomBar(
+        currentIndex: 0,
+        parentContext: context,
+      ),
+    );
+  }
+}
