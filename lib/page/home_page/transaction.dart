@@ -21,10 +21,32 @@ class TransactionPage extends StatefulWidget {
 }
 
 class _TransactionPageState extends State<TransactionPage> {
+  @override
+  void initState() {
+    super.initState();
+    fetchTanggalTidakTersedia();
+  }
+
+  Future<void> fetchTanggalTidakTersedia() async {
+    final currentUser = FirebaseAuth.instance.currentUser;
+    final snapshot =
+        await FirebaseFirestore.instance.collection('pesanan').get();
+
+    setState(() {
+      tanggalTidakTersedia = snapshot.docs
+          .where((doc) => doc['uid'] != currentUser?.uid)
+          .map((doc) {
+        Timestamp ts = doc['tanggal'];
+        return DateTime(ts.toDate().year, ts.toDate().month, ts.toDate().day);
+      }).toList();
+    });
+  }
+
   DateTime? selectedDate;
 
   bool? isDP;
   String? metodePembayaran;
+  List<DateTime> tanggalTidakTersedia = [];
 
   int get subtotal => selectedDate == null ? 0 : widget.pricePerDay;
 
@@ -41,11 +63,24 @@ class _TransactionPageState extends State<TransactionPage> {
   }
 
   void _selectDate() async {
+    // Cari initialDate yang valid, bukan DateTime.now()
+    DateTime initialDate = DateTime.now();
+    while (tanggalTidakTersedia.any((d) =>
+        d.year == initialDate.year &&
+        d.month == initialDate.month &&
+        d.day == initialDate.day)) {
+      initialDate = initialDate.add(const Duration(days: 1));
+    }
+
     final DateTime? picked = await showDatePicker(
       context: context,
-      initialDate: DateTime.now(),
+      initialDate: initialDate,
       firstDate: DateTime.now(),
       lastDate: DateTime(2101),
+      selectableDayPredicate: (DateTime day) {
+        final dateOnly = DateTime(day.year, day.month, day.day);
+        return !tanggalTidakTersedia.contains(dateOnly);
+      },
       builder: (context, child) {
         return Theme(
           data: Theme.of(context).copyWith(
@@ -62,7 +97,7 @@ class _TransactionPageState extends State<TransactionPage> {
 
     if (picked != null) {
       setState(() {
-        selectedDate = picked;
+        selectedDate = DateTime(picked.year, picked.month, picked.day);
       });
     }
   }
@@ -135,27 +170,31 @@ class _TransactionPageState extends State<TransactionPage> {
 
             const SizedBox(height: 20),
             // Pilih Tanggal
-            GestureDetector(
-              onTap: _selectDate,
-              child: Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                decoration: BoxDecoration(
-                  color: Color(0xFFFFE599),
-                  border: Border.all(color: Colors.black26),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      selectedDate == null
-                          ? 'Pilih Tanggal Sewa'
-                          : DateFormat('dd MMM yyyy').format(selectedDate!),
-                      style: const TextStyle(color: Colors.black),
-                    ),
-                    const Icon(Icons.arrow_drop_down, color: Colors.black),
-                  ],
+            MouseRegion(
+              cursor: SystemMouseCursors.click,
+              child: InkWell(
+                onTap: _selectDate,
+                borderRadius: BorderRadius.circular(12),
+                child: Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  decoration: BoxDecoration(
+                    color: Color(0xFFFFE599),
+                    border: Border.all(color: Colors.black26),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        selectedDate == null
+                            ? 'Pilih Tanggal Sewa'
+                            : DateFormat('dd MMM yyyy').format(selectedDate!),
+                        style: const TextStyle(color: Colors.black),
+                      ),
+                      const Icon(Icons.arrow_drop_down, color: Colors.black),
+                    ],
+                  ),
                 ),
               ),
             ),

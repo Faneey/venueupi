@@ -1,3 +1,5 @@
+import 'dart:ui';
+
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:venueupi/bottom_bar.dart';
@@ -44,15 +46,14 @@ class _HistoryPageState extends State<HistoryPage> {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) return;
 
+    // Ambil data dari koleksi utama: pesanan
     final snapshot = await FirebaseFirestore.instance
         .collection('pesanan')
         .where('uid', isEqualTo: user.uid)
         .get();
 
-    print("Jumlah data ditemukan: ${snapshot.docs.length}");
-
+    // Cek dan update status "PESANAN" -> "SELESAI" jika tanggal sudah lewat
     for (var doc in snapshot.docs) {
-      print("data ditemukan: ${doc.data()}");
       final data = doc.data();
       DateTime? tanggalDate;
 
@@ -61,18 +62,15 @@ class _HistoryPageState extends State<HistoryPage> {
         if (rawTanggal is Timestamp) {
           tanggalDate = rawTanggal.toDate();
         } else if (rawTanggal is String) {
-          // Coba parse manual (kalau terpaksa)
           tanggalDate =
               DateFormat("dd MMM yyyy", 'id_ID').parseStrict(rawTanggal);
         }
       } catch (e) {
         print("Gagal parsing tanggal: $e");
-        continue; // skip dokumen yang gagal parsing
+        continue;
       }
 
       final docId = doc.id;
-
-      // Cek apakah tanggal melewati hari ini
       if (tanggalDate != null &&
           tanggalDate.isBefore(DateTime.now()) &&
           data['status'] == 'PESANAN') {
@@ -83,7 +81,7 @@ class _HistoryPageState extends State<HistoryPage> {
       }
     }
 
-    // Ambil ulang data terbaru setelah update
+    // Ambil ulang data dari koleksi pesanan
     final refreshedSnapshot = await FirebaseFirestore.instance
         .collection('pesanan')
         .where('uid', isEqualTo: user.uid)
@@ -100,30 +98,65 @@ class _HistoryPageState extends State<HistoryPage> {
       );
     }).toList();
 
+    // Ambil data dari koleksi pesanan_dibatalkan
+    final batalSnapshot = await FirebaseFirestore.instance
+        .collection('pesanan_dibatalkan')
+        .where('uid', isEqualTo: user.uid)
+        .get();
+
+    final batalList = batalSnapshot.docs.map((doc) {
+      final data = doc.data();
+      return Pesanan(
+        title: data['title'] ?? '',
+        tanggal: (data['tanggal'] as Timestamp).toDate(),
+        harga: data['harga'] ?? 0,
+        status: 'BATAL',
+        imagePath: data['imagePath'] ?? '',
+      );
+    }).toList();
+
+    // Gabungkan semua ke dalam list utama
     setState(() {
-      pesananList = refreshedList;
+      pesananList = [...refreshedList, ...batalList];
     });
   }
 
   Widget buildTab(String label, int index) {
-    return GestureDetector(
-      onTap: () => setState(() => selectedTab = index),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        decoration: BoxDecoration(
-          color: selectedTab == index ? const Color(0xFFFFCC34) : Colors.white,
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: Colors.black12),
-        ),
-        child: Text(
-          label,
-          style: TextStyle(
-            fontWeight: FontWeight.bold,
-            color: selectedTab == index ? Colors.black : Colors.black54,
+    return MouseRegion(
+        cursor: SystemMouseCursors.click,
+        child: GestureDetector(
+          onTap: () => setState(() => selectedTab = index),
+          child: Container(
+            width: 100,
+            padding: const EdgeInsets.symmetric(vertical: 10),
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: selectedTab == index
+                  ? const Color(0xFFFFCC34)
+                  : const Color(0xFFF9F5EB),
+              borderRadius: BorderRadius.circular(20),
+              boxShadow: selectedTab == index
+                  ? [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.2),
+                        offset: const Offset(0, 2),
+                        blurRadius: 4,
+                      )
+                    ]
+                  : [],
+              border: Border.all(color: Colors.black12),
+            ),
+            child: Text(
+              label,
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontWeight: FontWeight.w600,
+                fontSize: 14,
+                color: selectedTab == index ? Colors.black : Colors.black54,
+              ),
+            ),
           ),
-        ),
-      ),
-    );
+        ));
   }
 
   Widget buildListByStatus(String status) {
@@ -143,24 +176,26 @@ class _HistoryPageState extends State<HistoryPage> {
         return Container(
           margin: const EdgeInsets.only(bottom: 12),
           decoration: BoxDecoration(
-            color: const Color(0xFFF9F9F9),
+            color: const Color(0xFFFFF9E3),
             borderRadius: BorderRadius.circular(12),
             border: Border.all(color: Colors.black12),
           ),
           child: ListTile(
             contentPadding: const EdgeInsets.all(12),
-            onTap: () async {
-              final updatedPesanan = await Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => UpdatePage(pesanan: pesanan),
-                ),
-              );
+            onTap: status == 'PESANAN'
+                ? () async {
+                    final updatedPesanan = await Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => UpdatePage(pesanan: pesanan),
+                      ),
+                    );
 
-              if (updatedPesanan != null && mounted) {
-                fetchPesanan(); // refresh data dari Firestore
-              }
-            },
+                    if (updatedPesanan != null && mounted) {
+                      fetchPesanan();
+                    }
+                  }
+                : null,
             title: Text(pesanan.title,
                 style:
                     const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
@@ -177,15 +212,14 @@ class _HistoryPageState extends State<HistoryPage> {
                 ? TextButton(
                     style: TextButton.styleFrom(
                       backgroundColor: const Color(0xFFE21F27),
-                      foregroundColor: Colors.white,
+                      foregroundColor: Color(0xFFFAE7AD),
                       padding: const EdgeInsets.symmetric(
-                          horizontal: 12, vertical: 6),
+                          horizontal: 10, vertical: 4),
                       shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(20)),
+                          borderRadius: BorderRadius.circular(15)),
                     ),
                     onPressed: () => showCancelDialog(pesanan),
-                    child: const Text('BATAL',
-                        style: TextStyle(fontWeight: FontWeight.bold)),
+                    child: const Text('BATAL'),
                   )
                 : null,
           ),
@@ -200,6 +234,7 @@ class _HistoryPageState extends State<HistoryPage> {
       barrierDismissible: true,
       builder: (context) {
         return Dialog(
+          backgroundColor: Colors.white,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(16),
           ),
@@ -215,14 +250,10 @@ class _HistoryPageState extends State<HistoryPage> {
                       child: Text(
                         'Batalkan Pesanan',
                         style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 18,
+                          fontWeight: FontWeight.w800,
+                          fontSize: 20,
                         ),
                       ),
-                    ),
-                    GestureDetector(
-                      onTap: () => Navigator.pop(context),
-                      child: const Icon(Icons.close, color: Colors.black54),
                     ),
                   ],
                 ),
@@ -251,7 +282,7 @@ class _HistoryPageState extends State<HistoryPage> {
                     TextButton(
                       style: TextButton.styleFrom(
                         backgroundColor: const Color(0xFFE21F27),
-                        foregroundColor: Colors.white,
+                        foregroundColor: Color(0xFFFFF1C4),
                         padding: const EdgeInsets.symmetric(
                             horizontal: 20, vertical: 10),
                         shape: RoundedRectangleBorder(
@@ -269,10 +300,17 @@ class _HistoryPageState extends State<HistoryPage> {
                             .limit(1)
                             .get();
                         if (snapshot.docs.isNotEmpty) {
+                          final doc = snapshot.docs.first;
+
+                          await FirebaseFirestore.instance
+                              .collection('pesanan_dibatalkan')
+                              .doc(doc.id)
+                              .set(doc.data());
+
                           await FirebaseFirestore.instance
                               .collection('pesanan')
                               .doc(snapshot.docs.first.id)
-                              .update({'status': 'BATAL'});
+                              .delete();
                           fetchPesanan();
                         }
                       },

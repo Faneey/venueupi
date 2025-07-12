@@ -15,11 +15,13 @@ class UpdatePage extends StatefulWidget {
 
 class _UpdatePageState extends State<UpdatePage> {
   late DateTime selectedDate;
+  List<DateTime> tanggalTidakTersedia = [];
 
   @override
   void initState() {
     super.initState();
     selectedDate = widget.pesanan.tanggal;
+    fetchTanggalTidakTersedia();
   }
 
   Future<void> _selectDate(BuildContext context) async {
@@ -29,8 +31,24 @@ class _UpdatePageState extends State<UpdatePage> {
       context: context,
       initialDate: initialDate,
       firstDate: DateTime.now(),
-      lastDate: DateTime(2100),
+      lastDate: DateTime(2101),
       locale: const Locale('id', 'ID'),
+      selectableDayPredicate: (DateTime day) {
+        return !tanggalTidakTersedia.any((d) =>
+            d.year == day.year && d.month == day.month && d.day == day.day);
+      },
+      builder: (context, child) {
+        return Theme(
+          data: Theme.of(context).copyWith(
+            colorScheme: const ColorScheme.light(
+              primary: Color(0xFFFFCC34),
+              onPrimary: Colors.black,
+              onSurface: Colors.black,
+            ),
+          ),
+          child: child!,
+        );
+      },
     );
 
     if (picked != null) {
@@ -38,6 +56,29 @@ class _UpdatePageState extends State<UpdatePage> {
         selectedDate = picked;
       });
     }
+  }
+
+  Future<void> fetchTanggalTidakTersedia() async {
+    final currentUser = FirebaseAuth.instance.currentUser;
+    final snapshot =
+        await FirebaseFirestore.instance.collection('pesanan').get();
+
+    setState(() {
+      tanggalTidakTersedia = snapshot.docs.where((doc) {
+        // Kecualikan tanggal milik pesanan yang sedang diedit
+        final data = doc.data();
+        final DateTime tanggal = (data['tanggal'] as Timestamp).toDate();
+        final isSameAsCurrent = data['title'] == widget.pesanan.title &&
+            tanggal.year == widget.pesanan.tanggal.year &&
+            tanggal.month == widget.pesanan.tanggal.month &&
+            tanggal.day == widget.pesanan.tanggal.day;
+
+        return doc['uid'] != currentUser?.uid && !isSameAsCurrent;
+      }).map((doc) {
+        Timestamp ts = doc['tanggal'];
+        return DateTime(ts.toDate().year, ts.toDate().month, ts.toDate().day);
+      }).toList();
+    });
   }
 
   @override
@@ -94,7 +135,10 @@ class _UpdatePageState extends State<UpdatePage> {
                       ),
                       child: Text(
                         'Harga Sewa/hari : ${currencyFormat.format(widget.pesanan.harga)}',
-                        style: const TextStyle(fontWeight: FontWeight.bold),
+                        style: const TextStyle(
+                          color: Color(0xFFE5F5EA),
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                     ),
                   )
@@ -106,12 +150,23 @@ class _UpdatePageState extends State<UpdatePage> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  const Text('Tanggal Sewa'),
+                  const Text('Ganti Tanggal Sewa'),
                   TextButton.icon(
                     onPressed: () => _selectDate(context),
-                    icon: const Icon(Icons.calendar_today, size: 18),
-                    label: Text(DateFormat('dd MMMM yyyy', 'id_ID')
-                        .format(selectedDate)),
+                    icon: const Icon(Icons.calendar_today,
+                        size: 18, color: Colors.black),
+                    label: Text(
+                      DateFormat('dd MMMM yyyy', 'id_ID').format(selectedDate),
+                      style: const TextStyle(color: Colors.black),
+                    ),
+                    style: TextButton.styleFrom(
+                      backgroundColor: Color(0xFFFFE599),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 16, vertical: 8),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
                   ),
                 ],
               ),
@@ -207,7 +262,7 @@ class _UpdatePageState extends State<UpdatePage> {
                     ),
                   ),
                   child: const Text('Update',
-                      style: TextStyle(color: Colors.white)),
+                      style: TextStyle(color: Color(0xFFFAE7AD))),
                 ),
               ),
               const SizedBox(height: 24),
