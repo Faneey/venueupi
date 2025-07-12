@@ -65,15 +65,18 @@ class _UpdatePageState extends State<UpdatePage> {
 
     setState(() {
       tanggalTidakTersedia = snapshot.docs.where((doc) {
-        // Kecualikan tanggal milik pesanan yang sedang diedit
         final data = doc.data();
+        final status = data['status'];
+
+        if (status == 'BATAL') return false; // abaikan yang dibatalkan
+
         final DateTime tanggal = (data['tanggal'] as Timestamp).toDate();
         final isSameAsCurrent = data['title'] == widget.pesanan.title &&
             tanggal.year == widget.pesanan.tanggal.year &&
             tanggal.month == widget.pesanan.tanggal.month &&
             tanggal.day == widget.pesanan.tanggal.day;
 
-        return doc['uid'] != currentUser?.uid && !isSameAsCurrent;
+        return !isSameAsCurrent; // izinkan tanggal milik pesanan yang sedang diedit
       }).map((doc) {
         Timestamp ts = doc['tanggal'];
         return DateTime(ts.toDate().year, ts.toDate().month, ts.toDate().day);
@@ -89,7 +92,8 @@ class _UpdatePageState extends State<UpdatePage> {
     return Scaffold(
       appBar: AppBar(
         leading: BackButton(color: Colors.black),
-        title: const Text("Transaction", style: TextStyle(color: Colors.black)),
+        title:
+            const Text("Ubah Tanggal", style: TextStyle(color: Colors.black)),
         backgroundColor: Colors.white,
         elevation: 0,
       ),

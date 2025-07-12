@@ -46,13 +46,11 @@ class _HistoryPageState extends State<HistoryPage> {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) return;
 
-    // Ambil data dari koleksi utama: pesanan
     final snapshot = await FirebaseFirestore.instance
         .collection('pesanan')
         .where('uid', isEqualTo: user.uid)
         .get();
 
-    // Cek dan update status "PESANAN" -> "SELESAI" jika tanggal sudah lewat
     for (var doc in snapshot.docs) {
       final data = doc.data();
       DateTime? tanggalDate;
@@ -81,7 +79,6 @@ class _HistoryPageState extends State<HistoryPage> {
       }
     }
 
-    // Ambil ulang data dari koleksi pesanan
     final refreshedSnapshot = await FirebaseFirestore.instance
         .collection('pesanan')
         .where('uid', isEqualTo: user.uid)
@@ -98,7 +95,6 @@ class _HistoryPageState extends State<HistoryPage> {
       );
     }).toList();
 
-    // Ambil data dari koleksi pesanan_dibatalkan
     final batalSnapshot = await FirebaseFirestore.instance
         .collection('pesanan_dibatalkan')
         .where('uid', isEqualTo: user.uid)
@@ -115,7 +111,6 @@ class _HistoryPageState extends State<HistoryPage> {
       );
     }).toList();
 
-    // Gabungkan semua ke dalam list utama
     setState(() {
       pesananList = [...refreshedList, ...batalList];
     });
@@ -163,10 +158,6 @@ class _HistoryPageState extends State<HistoryPage> {
     final currencyFormat = NumberFormat.currency(
         locale: 'id_ID', symbol: 'Rp. ', decimalDigits: 0);
     final filtered = pesananList.where((p) => p.status == status).toList();
-
-    if (filtered.isEmpty) {
-      return const Center(child: Text('Belum ada data'));
-    }
 
     return ListView.builder(
       itemCount: filtered.length,

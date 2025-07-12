@@ -33,9 +33,13 @@ class _TransactionPageState extends State<TransactionPage> {
         await FirebaseFirestore.instance.collection('pesanan').get();
 
     setState(() {
-      tanggalTidakTersedia = snapshot.docs
-          .where((doc) => doc['uid'] != currentUser?.uid)
-          .map((doc) {
+      tanggalTidakTersedia = snapshot.docs.where((doc) {
+        final status = doc['status'];
+        if (status == 'BATAL') return false;
+
+        Timestamp ts = doc['tanggal'];
+        return true; // semua status != BATAL dimasukkan
+      }).map((doc) {
         Timestamp ts = doc['tanggal'];
         return DateTime(ts.toDate().year, ts.toDate().month, ts.toDate().day);
       }).toList();
