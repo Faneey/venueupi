@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+// import 'package:cloud_firestore/cloud_firestore.dart';
+// import 'package:firebase_auth/firebase_auth.dart';
 
-import 'package:venueupi/home_page/home.dart';
-import 'package:venueupi/history_page/history.dart';
+import 'package:venueupi/page/home_page/home.dart';
+import 'package:venueupi/page/history_page/history.dart';
+import 'package:venueupi/page/profile_page.dart';
 
 class CustomBottomBar extends StatelessWidget {
   final int currentIndex;
@@ -23,7 +24,7 @@ class CustomBottomBar extends StatelessWidget {
       selectedItemColor: Colors.amber[700],
       unselectedItemColor: Colors.grey,
       onTap: (index) async {
-        if (index == currentIndex) return; // Hindari reload tab yang sama
+        if (index == currentIndex) return;
 
         if (index == 0) {
           // Navigasi ke halaman History
@@ -34,7 +35,7 @@ class CustomBottomBar extends StatelessWidget {
                   const HistoryPage(initialTab: 0),
               transitionsBuilder:
                   (context, animation, secondaryAnimation, child) {
-                const begin = Offset(-1.0, 0.0); // Geser dari kiri
+                const begin = Offset(-1.0, 0.0);
                 const end = Offset.zero;
                 const curve = Curves.ease;
 
@@ -55,9 +56,9 @@ class CustomBottomBar extends StatelessWidget {
             MaterialPageRoute(builder: (_) => const HomePage()),
           );
         } else if (index == 2) {
-          // Halaman Me belum tersedia
-          ScaffoldMessenger.of(parentContext).showSnackBar(
-            const SnackBar(content: Text("Halaman Me belum tersedia")),
+          Navigator.pushReplacement(
+            parentContext,
+            MaterialPageRoute(builder: (_) => const ProfilePage()),
           );
         }
       },

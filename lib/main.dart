@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:venueupi/auth_form/login.dart';
-import 'package:venueupi/home_page/home.dart';
+// import 'package:venueupi/home_page/home.dart';
 import 'firebase_options.dart';
 import 'package:device_frame/device_frame.dart';
 

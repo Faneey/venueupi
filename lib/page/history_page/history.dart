@@ -3,7 +3,7 @@ import 'package:intl/intl.dart';
 import 'package:venueupi/bottom_bar.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:venueupi/history_page/update.dart';
+import 'package:venueupi/page/history_page/update.dart';
 
 class Pesanan {
   final String title;

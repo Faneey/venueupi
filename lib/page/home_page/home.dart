@@ -1,7 +1,7 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:venueupi/auth_form/login.dart';
-import 'package:venueupi/home_page/transaction.dart';
+import 'package:venueupi/page/home_page/transaction.dart';
 import 'package:venueupi/bottom_bar.dart';
 
 class SplashScreen extends StatefulWidget {
@@ -30,7 +30,8 @@ class _SplashScreenState extends State<SplashScreen> {
         ),
       );
     } else {
-      Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => LoginPage()));
+      Navigator.pushReplacement(
+          context, MaterialPageRoute(builder: (context) => LoginPage()));
     }
   }
 
@@ -61,18 +62,6 @@ class HomePage extends StatelessWidget {
         title: const Text('UPI Venue'),
         centerTitle: true,
         backgroundColor: Color(0xFFFFFFFF),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.logout),
-            onPressed: () async {
-              await FirebaseAuth.instance.signOut();
-              Navigator.pushReplacement(
-                context,
-                MaterialPageRoute(builder: (context) => const LoginPage()),
-              );
-            },
-          ),
-        ],
       ),
       bottomNavigationBar: CustomBottomBar(
         currentIndex: 1,

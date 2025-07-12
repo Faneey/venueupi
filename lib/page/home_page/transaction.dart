@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:venueupi/history_page/history.dart';
+import 'package:venueupi/page/history_page/history.dart';
 
 class TransactionPage extends StatefulWidget {
   final String title;
